@@ -738,7 +738,7 @@ textarea { resize: vertical; min-height: 72px; }
           <div class="section-title">Identificação</div>
           <div class="form-grid">
             <div class="field"><label>OT Nº *</label><input type="number" id="f-ot"></div>
-            <div class="field"><label>Data de Entrada *</label><input type="date" id="f-data-entrada"></div>
+            <div class="field"><label>Data de Entrada *</label><input type="text" id="f-data-entrada" placeholder="dd/mm/aaaa" maxlength="10"></div>
             <div class="field"><label>Mês</label><select id="f-mes"><option value="">—</option><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option></select></div>
             <div class="field"><label>Cliente *</label><input type="text" id="f-cliente"></div>
           </div>
@@ -765,7 +765,7 @@ textarea { resize: vertical; min-height: 72px; }
         <div class="form-section">
           <div class="section-title">Entrega & Guia</div>
           <div class="form-grid">
-            <div class="field"><label>Data Entrega</label><input type="date" id="f-data-entrega" onchange="verificarStatusPorData()"></div>
+            <div class="field"><label>Data Entrega</label><input type="text" id="f-data-entrega" placeholder="dd/mm/aaaa" maxlength="10"></div>
             <div class="field"><label>Nº Guia</label><input type="text" id="f-guia"></div>
             <div class="field full"><label>Observações</label><textarea id="f-obs"></textarea></div>
           </div>
@@ -825,7 +825,7 @@ textarea { resize: vertical; min-height: 72px; }
 </div>
 
 <!-- Modal Edição -->
-<div class="modal-bg" id="modal-bg"><div class="modal"><div class="modal-head"><h3>Editar Registo</h3><button class="close-btn" onclick="fecharModal()">✕</button></div><div class="modal-body"><div class="form-grid"><div class="field"><label>OT</label><input type="number" id="e-ot"></div><div class="field"><label>Data Entrada</label><input type="date" id="e-data-entrada"></div><div class="field"><label>Mês</label><select id="e-mes"><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option></select></div><div class="field"><label>Cliente</label><input type="text" id="e-cliente"></div><div class="field span2"><label>Descrição</label><input type="text" id="e-descricao"></div><div class="field"><label>Papel</label><input type="text" id="e-papel"></div><div class="field"><label>Quantidade</label><input type="number" id="e-qtd"></div><div class="field span2"><label>Tamanho</label><input type="text" id="e-tamanho"></div><div class="field"><label>Estado</label><select id="e-status"><option value="pendente">Pendente</option><option value="producao">Produção</option><option value="entregue">Entregue</option><option value="cancelado">Cancelado</option></select></div><div class="field"><label>Data Entrega</label><input type="date" id="e-data-entrega" onchange="verificarStatusPorDataModal()"></div><div class="field"><label>Guia</label><input type="text" id="e-guia"></div><div class="field full"><label>Observações</label><textarea id="e-obs"></textarea></div></div></div><div class="modal-foot"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicao()">Guardar</button></div></div></div>
+<div class="modal-bg" id="modal-bg"><div class="modal"><div class="modal-head"><h3>Editar Registo</h3><button class="close-btn" onclick="fecharModal()">✕</button></div><div class="modal-body"><div class="form-grid"><div class="field"><label>OT</label><input type="number" id="e-ot"></div><div class="field"><label>Data Entrada</label><input type="text" id="e-data-entrada" placeholder="dd/mm/aaaa" maxlength="10"></div><div class="field"><label>Mês</label><select id="e-mes"><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option></select></div><div class="field"><label>Cliente</label><input type="text" id="e-cliente"></div><div class="field span2"><label>Descrição</label><input type="text" id="e-descricao"></div><div class="field"><label>Papel</label><input type="text" id="e-papel"></div><div class="field"><label>Quantidade</label><input type="number" id="e-qtd"></div><div class="field span2"><label>Tamanho</label><input type="text" id="e-tamanho"></div><div class="field"><label>Estado</label><select id="e-status"><option value="pendente">Pendente</option><option value="producao">Produção</option><option value="entregue">Entregue</option><option value="cancelado">Cancelado</option></select></div><div class="field"><label>Data Entrega</label><input type="text" id="e-data-entrega" placeholder="dd/mm/aaaa" maxlength="10"></div><div class="field"><label>Guia</label><input type="text" id="e-guia"></div><div class="field full"><label>Observações</label><textarea id="e-obs"></textarea></div></div></div><div class="modal-foot"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicao()">Guardar</button></div></div></div>
 
 <div class="toast" id="toast"></div>
 <div id="pdf-container-helper"></div>
@@ -834,7 +834,7 @@ textarea { resize: vertical; min-height: 72px; }
 // ══════════════════════════════════════════════════════════════
 //  CONFIGURAÇÃO — Cole o seu URL do Apps Script aqui:
 // ══════════════════════════════════════════════════════════════
-const SCRIPT_URL = localStorage.getItem('pt_script_url') || '';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxi3ivIJXfOvPxnXWoHANkzdrbBIuifPBvjQXagNljILnhlCBigSi_4xxPeoNcjilH1/exec';
 // ══════════════════════════════════════════════════════════════
 
 const KEY = 'pt_dados_v2';
@@ -892,26 +892,8 @@ async function carregarDoSheets() {
   }
 }
 
-// ── Configurar URL via prompt ─────────────────────────────────
-function configurarURL() {
-  const atual = localStorage.getItem('pt_script_url') || '';
-  const novo = prompt(
-    '🔗 Cole o URL do seu Google Apps Script:\n\n' +
-    'Formato: https://script.google.com/macros/s/XXXXXX/exec\n\n' +
-    'Deixe em branco para usar apenas local.',
-    atual
-  );
-  if (novo === null) return; // cancelou
-  const url = novo.trim();
-  if (url) {
-    localStorage.setItem('pt_script_url', url);
-    location.reload();
-  } else {
-    localStorage.removeItem('pt_script_url');
-    setOnlineStatus(false, 'Offline · Local');
-    toast('URL removido. A usar modo local.', 'ok');
-  }
-}
+// ── Configurar URL ─────────────────────────────────────────────
+function configurarURL() { /* URL já configurado no código */ }
 
 // ── Header ─────────────────────────────────────────────────────
 function updateHeader() {
@@ -937,35 +919,7 @@ function selectStatus(el) {
   document.getElementById('f-status').value = el.dataset.v;
 }
 
-// Função para verificar e atualizar status baseado na data de entrega (formulário)
-function verificarStatusPorData() {
-  const dataEntrega = document.getElementById('f-data-entrega').value;
-  const statusField = document.getElementById('f-status');
-  const statusPills = document.querySelectorAll('.status-pill');
-  
-  if (dataEntrega && dataEntrega !== '') {
-    // Se tem data de entrega, muda para entregue
-    statusField.value = 'entregue';
-    statusPills.forEach(p => {
-      p.classList.remove('active-pill');
-      if (p.dataset.v === 'entregue') {
-        p.classList.add('active-pill');
-      }
-    });
-    toast('Data de entrega preenchida. Estado alterado para "Entregue" automaticamente.', 'ok');
-  }
-}
-
-// Função para verificar no modal
-function verificarStatusPorDataModal() {
-  const dataEntrega = document.getElementById('e-data-entrega').value;
-  const statusSelect = document.getElementById('e-status');
-  
-  if (dataEntrega && dataEntrega !== '') {
-    statusSelect.value = 'entregue';
-    toast('Data de entrega preenchida. Estado alterado para "Entregue" automaticamente.', 'ok');
-  }
-}
+// Funções de verificação automática removidas — estado é manual
 
 async function salvar() {
   const ot = document.getElementById('f-ot').value.trim();
@@ -1040,20 +994,15 @@ function inlineEdit(span, idx, field, type) {
   const data = getData();
   const current = data[idx][field] || '';
   const inp = document.createElement('input');
-  inp.type = type;
+  inp.type = (field === 'dataEntrega' || field === 'dataEntrada') ? 'text' : type;
+  inp.placeholder = (field === 'dataEntrega' || field === 'dataEntrada') ? 'dd/mm/aaaa' : '';
+  inp.maxLength = (field === 'dataEntrega' || field === 'dataEntrada') ? 10 : 524288;
   inp.value = current;
   inp.className = 'cell-input';
   span.replaceWith(inp);
   inp.focus();
   inp.addEventListener('blur', () => {
-    const newValue = inp.value;
-    // Se for o campo dataEntrega e tiver valor, atualizar status para entregue
-    if (field === 'dataEntrega' && newValue && newValue !== '') {
-      data[idx].status = 'entregue';
-      setData(data);
-      toast('Data de entrega preenchida. Estado alterado para "Entregue".', 'ok');
-    }
-    updateField(idx, field, newValue, null);
+    updateField(idx, field, inp.value, null);
   });
   inp.addEventListener('keydown', e => { if(e.key === 'Enter') inp.blur(); if(e.key === 'Escape') renderTabela(); });
 }
@@ -1121,12 +1070,6 @@ function abrirModal(idx) {
 function fecharModal() { document.getElementById('modal-bg').classList.remove('open'); editIdx=null; }
 function salvarEdicao() { 
   const data = getData(); 
-  const novaDataEntrega = document.getElementById('e-data-entrega').value;
-  let novoStatus = document.getElementById('e-status').value;
-  if (novaDataEntrega && novaDataEntrega !== '' && novoStatus !== 'entregue') {
-    novoStatus = 'entregue';
-    toast('Estado alterado para "Entregue" automaticamente.', 'ok');
-  }
   const updated = {...data[editIdx], 
     ot: document.getElementById('e-ot').value, 
     dataEntrada: document.getElementById('e-data-entrada').value, 
@@ -1136,8 +1079,8 @@ function salvarEdicao() {
     papel: document.getElementById('e-papel').value, 
     qtd: document.getElementById('e-qtd').value, 
     tamanho: document.getElementById('e-tamanho').value, 
-    status: novoStatus, 
-    dataEntrega: novaDataEntrega, 
+    status: document.getElementById('e-status').value, 
+    dataEntrega: document.getElementById('e-data-entrega').value, 
     guia: document.getElementById('e-guia').value, 
     obs: document.getElementById('e-obs').value 
   }; 
@@ -1146,7 +1089,6 @@ function salvarEdicao() {
   fecharModal(); 
   renderTabela(); 
   toast('Actualizado!', 'ok');
-  // Sincroniza com Sheets
   if (SCRIPT_URL) {
     gsPost({ action: 'update', data: updated })
       .then(() => setOnlineStatus(true))
