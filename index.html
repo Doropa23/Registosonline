@@ -912,7 +912,7 @@ async function salvar() {
     obs: document.getElementById('f-obs').value
   };
 
-  // SALVAR LOCAL
+  // GUARDAR LOCAL
   const d = getData();
   d.push(reg);
   setData(d);
@@ -920,19 +920,20 @@ async function salvar() {
   // ENVIAR PARA GOOGLE SHEETS
   try {
 
-    await fetch("https://script.google.com/macros/s/AKfycbz60BX-DChTc8vFm7EQDfBMWgEJorWvxn78hu4Vfw53_t0RzH4F3TPXPYFyGQtLWgWaOw/exec", {
+    await fetch("https://script.google.com/macros/s/AKfycbyBrL8hJ_H37OEpsuYzUAclIQH1aYmMX4NH0XHsYO0twV9_2A5iNS6tZJg3rqlXMa6RvQ/exec", {
       method: "POST",
-      body: JSON.stringify(reg),
+      mode: "no-cors",
       headers: {
         "Content-Type": "application/json"
-      }
+      },
+      body: JSON.stringify(reg)
     });
 
     toast('OT registada e sincronizada!', 'ok');
 
   } catch (err) {
 
-    toast('Guardado localmente. Erro ao sincronizar.', 'err');
+    toast('Erro ao sincronizar com Google Sheets', 'err');
 
   }
 
