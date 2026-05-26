@@ -690,6 +690,11 @@ textarea { resize: vertical; min-height: 72px; }
     <div class="header-title">Plano de Trabalhos</div>
   </div>
   <div class="header-right">
+    <div onclick="configurarURL()" title="Clique para configurar Google Sheets"
+      style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:4px 10px;cursor:pointer">
+      <div id="net-dot" style="width:7px;height:7px;border-radius:50%;background:#e74c3c;transition:background .3s;flex-shrink:0"></div>
+      <span id="net-label" style="font-size:11px;color:rgba(255,255,255,.6);white-space:nowrap">Offline · Local</span>
+    </div>
     <div class="header-stat" id="hstat">
       Total: <strong id="h-total">0</strong> &nbsp;|&nbsp; Produção: <strong id="h-prod">0</strong> &nbsp;|&nbsp; Entregues: <strong id="h-ent">0</strong>
     </div>
@@ -826,13 +831,89 @@ textarea { resize: vertical; min-height: 72px; }
 <div id="pdf-container-helper"></div>
 
 <script>
+// ══════════════════════════════════════════════════════════════
+//  CONFIGURAÇÃO — Cole o seu URL do Apps Script aqui:
+// ══════════════════════════════════════════════════════════════
+const SCRIPT_URL = localStorage.getItem('pt_script_url') || '';
+// ══════════════════════════════════════════════════════════════
+
 const KEY = 'pt_dados_v2';
 let editIdx = null;
 let activeFiltered = [];
+let isSyncing = false;
 
-function getData() { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
+// ── LocalStorage ──────────────────────────────────────────────
+function getData()  { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
 function setData(d) { localStorage.setItem(KEY, JSON.stringify(d)); updateHeader(); }
 
+// ── Indicador online/offline ──────────────────────────────────
+function setOnlineStatus(online, msg) {
+  const dot = document.getElementById('net-dot');
+  const lbl = document.getElementById('net-label');
+  if (!dot) return;
+  dot.style.background = online ? '#27ae60' : (online === null ? '#e67e00' : '#e74c3c');
+  lbl.textContent = msg || (online ? 'Online · Sheets' : 'Offline · Local');
+}
+
+// ── Chamadas ao Apps Script ───────────────────────────────────
+async function gsGet() {
+  if (!SCRIPT_URL) throw new Error('URL não configurado');
+  const r = await fetch(SCRIPT_URL, { redirect: 'follow' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+async function gsPost(body) {
+  if (!SCRIPT_URL) throw new Error('URL não configurado');
+  const r = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body),
+    redirect: 'follow'
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// ── Carregar dados do Sheets (ao abrir a aba tabela) ──────────
+async function carregarDoSheets() {
+  if (!SCRIPT_URL) { renderTabela(); return; }
+  setOnlineStatus(null, 'A carregar...');
+  try {
+    const online = await gsGet();
+    if (!Array.isArray(online)) throw new Error('Resposta inválida');
+    setData(online);
+    setOnlineStatus(true);
+    renderTabela();
+    toast('Dados actualizados do Google Sheets.', 'ok');
+  } catch {
+    setOnlineStatus(false, 'Offline · Local');
+    renderTabela();
+  }
+}
+
+// ── Configurar URL via prompt ─────────────────────────────────
+function configurarURL() {
+  const atual = localStorage.getItem('pt_script_url') || '';
+  const novo = prompt(
+    '🔗 Cole o URL do seu Google Apps Script:\n\n' +
+    'Formato: https://script.google.com/macros/s/XXXXXX/exec\n\n' +
+    'Deixe em branco para usar apenas local.',
+    atual
+  );
+  if (novo === null) return; // cancelou
+  const url = novo.trim();
+  if (url) {
+    localStorage.setItem('pt_script_url', url);
+    location.reload();
+  } else {
+    localStorage.removeItem('pt_script_url');
+    setOnlineStatus(false, 'Offline · Local');
+    toast('URL removido. A usar modo local.', 'ok');
+  }
+}
+
+// ── Header ─────────────────────────────────────────────────────
 function updateHeader() {
   const d = getData();
   document.getElementById('h-total').textContent = d.length;
@@ -845,7 +926,7 @@ function switchTab(t) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + t).classList.add('active');
   document.getElementById('tb-' + t).classList.add('active');
-  if (t === 'table') renderTabela();
+  if (t === 'table') carregarDoSheets();
   if (t === 'backup') atualizarPreviewBackup();
   if (t === 'relatorios') gerarRelatorio();
 }
@@ -887,17 +968,12 @@ function verificarStatusPorDataModal() {
 }
 
 async function salvar() {
-
   const ot = document.getElementById('f-ot').value.trim();
   const cliente = document.getElementById('f-cliente').value.trim();
-
-  if (!ot && !cliente) {
-    toast('Preencha OT ou Cliente.', 'err');
-    return;
-  }
+  if (!ot && !cliente) { toast('Preencha OT ou Cliente.', 'err'); return; }
 
   const reg = {
-    id: Date.now(),
+    id: String(Date.now()),
     ot,
     dataEntrada: document.getElementById('f-data-entrada').value,
     mes: document.getElementById('f-mes').value,
@@ -909,35 +985,34 @@ async function salvar() {
     status: document.getElementById('f-status').value,
     dataEntrega: document.getElementById('f-data-entrega').value,
     guia: document.getElementById('f-guia').value,
-    obs: document.getElementById('f-obs').value
+    obs: document.getElementById('f-obs').value,
+    criadoEm: new Date().toISOString()
   };
 
-  // GUARDAR LOCAL
+  // 1. Guarda localmente de imediato
   const d = getData();
   d.push(reg);
   setData(d);
-
-  // ENVIAR PARA GOOGLE SHEETS
-  try {
-
-    await fetch("https://script.google.com/macros/s/AKfycbwQ4tYRpfp516k2efZgoXjYG2kiOFLUM0pj7HOStfwkeBakFJD34P8YUA7JLn6Adjud/exec", {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(reg)
-    });
-
-    toast('OT registada e sincronizada!', 'ok');
-
-  } catch (err) {
-
-    toast('Erro ao sincronizar com Google Sheets', 'err');
-
-  }
-
   limparForm();
+  toast('A guardar...', 'ok');
+
+  // 2. Envia para Google Sheets
+  if (SCRIPT_URL) {
+    try {
+      const res = await gsPost({ action: 'create', data: reg });
+      if (res.ok) {
+        setOnlineStatus(true);
+        toast('OT guardada no Google Sheets! ✓', 'ok');
+      } else {
+        toast('Guardado localmente. Sheets: ' + (res.erro || 'erro'), 'err');
+      }
+    } catch {
+      setOnlineStatus(false, 'Offline · Local');
+      toast('Sem ligação — guardado localmente.', 'warn');
+    }
+  } else {
+    toast('OT guardada localmente. Configure o Sheets para sincronizar.', 'ok');
+  }
 }
 
 function limparForm() {
@@ -985,14 +1060,46 @@ function inlineEdit(span, idx, field, type) {
 
 function updateField(idx, field, value, el) {
   const data = getData();
+  const reg = data[idx];
   data[idx][field] = value;
   setData(data);
   renderTabela();
   toast('Actualizado.', 'ok');
+  // Sincroniza com Sheets em background
+  if (SCRIPT_URL && reg) {
+    gsPost({ action: 'update', data: { ...reg, [field]: value } })
+      .then(() => setOnlineStatus(true))
+      .catch(() => setOnlineStatus(false, 'Offline · Local'));
+  }
 }
 
-function deletar(idx) { if(confirm('Apagar este registo?')){ const d=getData(); d.splice(idx,1); setData(d); renderTabela(); toast('Apagado.','ok'); } }
-function limparTudo() { if(confirm('Apagar TODOS os registos? Esta acção não pode ser desfeita.')){ localStorage.removeItem(KEY); updateHeader(); renderTabela(); toast('Todos apagados.','err'); } }
+function deletar(idx) {
+  if (!confirm('Apagar este registo?')) return;
+  const d = getData();
+  const reg = d[idx];
+  d.splice(idx, 1);
+  setData(d);
+  renderTabela();
+  toast('Apagado.', 'ok');
+  if (SCRIPT_URL && reg) {
+    gsPost({ action: 'delete', id: reg.id })
+      .then(() => setOnlineStatus(true))
+      .catch(() => setOnlineStatus(false, 'Offline · Local'));
+  }
+}
+
+function limparTudo() {
+  if (!confirm('Apagar TODOS os registos? Esta acção não pode ser desfeita.')) return;
+  localStorage.removeItem(KEY);
+  updateHeader();
+  renderTabela();
+  toast('Todos apagados.', 'err');
+  if (SCRIPT_URL) {
+    gsPost({ action: 'deleteAll' })
+      .then(() => setOnlineStatus(true))
+      .catch(() => {});
+  }
+}
 
 function abrirModal(idx) { 
   editIdx=idx; 
@@ -1013,34 +1120,38 @@ function abrirModal(idx) {
 }
 function fecharModal() { document.getElementById('modal-bg').classList.remove('open'); editIdx=null; }
 function salvarEdicao() { 
-  const data=getData(); 
+  const data = getData(); 
   const novaDataEntrega = document.getElementById('e-data-entrega').value;
   let novoStatus = document.getElementById('e-status').value;
-  
-  // Se data de entrega foi preenchida e status não é entregue, atualiza automaticamente
   if (novaDataEntrega && novaDataEntrega !== '' && novoStatus !== 'entregue') {
     novoStatus = 'entregue';
-    toast('Data de entrega preenchida. Estado alterado para "Entregue" automaticamente.', 'ok');
+    toast('Estado alterado para "Entregue" automaticamente.', 'ok');
   }
-  
-  data[editIdx]={...data[editIdx], 
-    ot:document.getElementById('e-ot').value, 
-    dataEntrada:document.getElementById('e-data-entrada').value, 
-    mes:document.getElementById('e-mes').value, 
-    cliente:document.getElementById('e-cliente').value, 
-    descricao:document.getElementById('e-descricao').value, 
-    papel:document.getElementById('e-papel').value, 
-    qtd:document.getElementById('e-qtd').value, 
-    tamanho:document.getElementById('e-tamanho').value, 
-    status:novoStatus, 
-    dataEntrega:novaDataEntrega, 
-    guia:document.getElementById('e-guia').value, 
-    obs:document.getElementById('e-obs').value 
+  const updated = {...data[editIdx], 
+    ot: document.getElementById('e-ot').value, 
+    dataEntrada: document.getElementById('e-data-entrada').value, 
+    mes: document.getElementById('e-mes').value, 
+    cliente: document.getElementById('e-cliente').value, 
+    descricao: document.getElementById('e-descricao').value, 
+    papel: document.getElementById('e-papel').value, 
+    qtd: document.getElementById('e-qtd').value, 
+    tamanho: document.getElementById('e-tamanho').value, 
+    status: novoStatus, 
+    dataEntrega: novaDataEntrega, 
+    guia: document.getElementById('e-guia').value, 
+    obs: document.getElementById('e-obs').value 
   }; 
+  data[editIdx] = updated;
   setData(data); 
   fecharModal(); 
   renderTabela(); 
-  toast('Actualizado!','ok'); 
+  toast('Actualizado!', 'ok');
+  // Sincroniza com Sheets
+  if (SCRIPT_URL) {
+    gsPost({ action: 'update', data: updated })
+      .then(() => setOnlineStatus(true))
+      .catch(() => setOnlineStatus(false, 'Offline · Local'));
+  }
 }
 document.getElementById('modal-bg').addEventListener('click', e => { if(e.target === document.getElementById('modal-bg')) fecharModal(); });
 
@@ -1061,6 +1172,8 @@ function toast(msg,type){ const t=document.getElementById('toast'); t.textConten
 
 updateHeader();
 renderTabela();
+// Ligar ao Sheets ao arrancar
+if (SCRIPT_URL) carregarDoSheets();
 </script>
 </body>
 </html>
