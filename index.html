@@ -886,32 +886,57 @@ function verificarStatusPorDataModal() {
   }
 }
 
-function salvar() {
+async function salvar() {
+
   const ot = document.getElementById('f-ot').value.trim();
   const cliente = document.getElementById('f-cliente').value.trim();
-  if (!ot && !cliente) { toast('Preencha OT ou Cliente.', 'err'); return; }
-  
-  const reg = { 
-    id: Date.now(), 
-    ot, 
-    dataEntrada: document.getElementById('f-data-entrada').value, 
-    mes: document.getElementById('f-mes').value, 
-    cliente, 
-    descricao: document.getElementById('f-descricao').value, 
-    papel: document.getElementById('f-papel').value, 
-    qtd: document.getElementById('f-qtd').value, 
-    tamanho: document.getElementById('f-tamanho').value, 
-    status: document.getElementById('f-status').value, 
-    dataEntrega: document.getElementById('f-data-entrega').value, 
-    guia: document.getElementById('f-guia').value, 
-    obs: document.getElementById('f-obs').value 
+
+  if (!ot && !cliente) {
+    toast('Preencha OT ou Cliente.', 'err');
+    return;
+  }
+
+  const reg = {
+    id: Date.now(),
+    ot,
+    dataEntrada: document.getElementById('f-data-entrada').value,
+    mes: document.getElementById('f-mes').value,
+    cliente,
+    descricao: document.getElementById('f-descricao').value,
+    papel: document.getElementById('f-papel').value,
+    qtd: document.getElementById('f-qtd').value,
+    tamanho: document.getElementById('f-tamanho').value,
+    status: document.getElementById('f-status').value,
+    dataEntrega: document.getElementById('f-data-entrega').value,
+    guia: document.getElementById('f-guia').value,
+    obs: document.getElementById('f-obs').value
   };
-  
+
+  // SALVAR LOCAL
   const d = getData();
   d.push(reg);
   setData(d);
+
+  // ENVIAR PARA GOOGLE SHEETS
+  try {
+
+    await fetch("https://script.google.com/macros/s/AKfycbz60BX-DChTc8vFm7EQDfBMWgEJorWvxn78hu4Vfw53_t0RzH4F3TPXPYFyGQtLWgWaOw/exec", {
+      method: "POST",
+      body: JSON.stringify(reg),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+
+    toast('OT registada e sincronizada!', 'ok');
+
+  } catch (err) {
+
+    toast('Guardado localmente. Erro ao sincronizar.', 'err');
+
+  }
+
   limparForm();
-  toast('OT registada!', 'ok');
 }
 
 function limparForm() {
