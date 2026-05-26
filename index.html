@@ -892,11 +892,14 @@ async function salvar() {
   const cliente = document.getElementById('f-cliente').value.trim();
 
   if (!ot && !cliente) {
+
     toast('Preencha OT ou Cliente.', 'err');
     return;
+
   }
 
   const reg = {
+
     id: Date.now(),
     ot,
     dataEntrada: document.getElementById('f-data-entrada').value,
@@ -910,33 +913,37 @@ async function salvar() {
     dataEntrega: document.getElementById('f-data-entrega').value,
     guia: document.getElementById('f-guia').value,
     obs: document.getElementById('f-obs').value
+
   };
 
-  // GUARDAR LOCAL
+  // GUARDAR LOCALMENTE
   const d = getData();
+
   d.push(reg);
+
   setData(d);
 
-  // ENVIAR PARA GOOGLE SHEETS
-  const response = await fetch("https://script.google.com/macros/s/AKfycbwguxsskR0mL9OoV0eTSj6_51E7BxoxIAdtgJX04pMrZAUU9Nuc2GkjRAwWzP3cpMhD7g/exec", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify(reg)
-});
+  try {
 
-const result = await response.json();
+    const response = await fetch(
+      "https://script.google.com/macros/s/AKfycbyuAh_ibF4HD-DEy2XeW5inR3RltLtOr1-301oN2_IzNNf1fynks4MARyyPEt_q7gPGYQ/exec",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(reg)
+      }
+    );
 
-if(result.success){
+    toast('OT sincronizada com Google Sheets!', 'ok');
 
-  toast('OT sincronizada com Google Sheets!', 'ok');
+  } catch (err) {
 
-}else{
+    toast('Erro ao sincronizar online.', 'err');
 
-  toast('Erro Google Sheets', 'err');
+  }
 
-}
   limparForm();
 }
 
