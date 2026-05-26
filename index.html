@@ -918,25 +918,25 @@ async function salvar() {
   setData(d);
 
   // ENVIAR PARA GOOGLE SHEETS
-  try {
+  const response = await fetch("https://script.google.com/macros/s/AKfycbyBrL8hJ_H37OEpsuYzUAclIQH1aYmMX4NH0XHsYO0twV9_2A5iNS6tZJg3rqlXMa6RvQ/exechttps://script.google.com/macros/s/AKfycbynklQIIiLtJhxgDqrrpkaH588bDW8h4ElfoEDrpj5-Ewq1rRxIvw5_iBOVy9-ulko_vA/exec", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify(reg)
+});
 
-    await fetch("https://script.google.com/macros/s/AKfycbyBrL8hJ_H37OEpsuYzUAclIQH1aYmMX4NH0XHsYO0twV9_2A5iNS6tZJg3rqlXMa6RvQ/exec", {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(reg)
-    });
+const result = await response.json();
 
-    toast('OT registada e sincronizada!', 'ok');
+if(result.success){
 
-  } catch (err) {
+  toast('OT sincronizada com Google Sheets!', 'ok');
 
-    toast('Erro ao sincronizar com Google Sheets', 'err');
+}else{
 
-  }
+  toast('Erro Google Sheets', 'err');
 
+}
   limparForm();
 }
 
