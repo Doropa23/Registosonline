@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Plano de Trabalhos - Sistema Completo</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -680,6 +681,33 @@ textarea { resize: vertical; min-height: 72px; }
   background: white;
   z-index: -1;
 }
+
+/* ===== Datas com calendário ===== */
+.date-wrap{position:relative;display:flex;align-items:center;width:100%}
+.date-wrap input[type=text]{padding-right:40px}
+.date-wrap.inl{display:inline-flex;min-width:160px;width:auto}
+.date-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:none;background:transparent;cursor:pointer;font-size:16px;padding:4px 7px;border-radius:6px;line-height:1}
+.date-btn:hover{background:var(--accent-bg)}
+.date-native{position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
+input.data-erro{border-color:#c0392b!important}
+
+/* ===== Aba Visualização: mais larga e confortável ===== */
+body.tbl-wide .main{max-width:min(98vw,1900px);padding-left:16px;padding-right:16px}
+#panel-table .tbl{font-size:14px;min-width:1500px}
+#panel-table .tbl th{padding:14px 16px;font-size:12px}
+#panel-table .tbl td{padding:15px 16px;line-height:1.5}
+#panel-table .tbl td:nth-child(1),#panel-table .tbl td:nth-child(2),#panel-table .tbl td:nth-child(3),
+#panel-table .tbl td:nth-child(7),#panel-table .tbl td:nth-child(10),#panel-table .tbl td:nth-child(11){white-space:nowrap}
+#panel-table .tbl td:nth-child(4){min-width:170px}
+#panel-table .tbl td:nth-child(5){min-width:260px}
+#panel-table .tbl td:nth-child(6){min-width:120px}
+#panel-table .tbl td:nth-child(8){min-width:150px}
+#panel-table .tbl td:nth-child(12){min-width:230px}
+#panel-table .tbl th:last-child{position:sticky;right:0;background:var(--ink)}
+#panel-table .tbl td:last-child{position:sticky;right:0;background:var(--surface);box-shadow:-6px 0 8px -6px rgba(0,0,0,.12)}
+/* Estado: texto completo visível */
+select.badge{width:auto;min-width:160px;padding:7px 30px 7px 12px;font-size:13px;white-space:nowrap;text-overflow:clip;cursor:pointer}
+#panel-table .tbl td:nth-child(9){min-width:180px;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -784,7 +812,7 @@ textarea { resize: vertical; min-height: 72px; }
       <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><input type="text" id="srch" placeholder="Pesquisar..." oninput="renderTabela()"></div>
       <div class="filter-group"><select id="flt-mes" onchange="renderTabela()"><option value="">Todos os meses</option><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option></select><select id="flt-status" onchange="renderTabela()"><option value="">Todos os estados</option><option value="pendente">Pendente</option><option value="producao">Produção</option><option value="entregue">Entregue</option><option value="cancelado">Cancelado</option></select></div>
       <span class="tbl-meta" id="tbl-meta"></span>
-      <button class="btn btn-ghost btn-sm" onclick="exportCSV()">📄 Exportar CSV</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportXLSM()">📊 Exportar XLSM</button>
     </div>
     <div class="table-wrap"><div class="tbl-scroll"><table class="tbl"><thead><tr><th>OT</th><th>Mês</th><th>Entrada</th><th>Cliente</th><th>Descrição</th><th>Papel</th><th>Qtd</th><th>Tamanho</th><th>Estado</th><th>Dt. Entrega</th><th>Guia</th><th>Obs</th><th>Ações</th></tr></thead><tbody id="tbody"></tbody></table></div><div id="empty" class="empty" style="display:none"><p>Nenhum registo encontrado.</p></div></div>
     <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-danger btn-sm" onclick="limparTudo()">🗑️ Apagar todos</button></div>
@@ -826,6 +854,9 @@ textarea { resize: vertical; min-height: 72px; }
 
 <!-- Modal Edição -->
 <div class="modal-bg" id="modal-bg"><div class="modal"><div class="modal-head"><h3>Editar Registo</h3><button class="close-btn" onclick="fecharModal()">✕</button></div><div class="modal-body"><div class="form-grid"><div class="field"><label>OT</label><input type="number" id="e-ot"></div><div class="field"><label>Data Entrada</label><input type="text" id="e-data-entrada" placeholder="dd/mm/aaaa" maxlength="10"></div><div class="field"><label>Mês</label><select id="e-mes"><option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option><option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option></select></div><div class="field"><label>Cliente</label><input type="text" id="e-cliente"></div><div class="field span2"><label>Descrição</label><input type="text" id="e-descricao"></div><div class="field"><label>Papel</label><input type="text" id="e-papel"></div><div class="field"><label>Quantidade</label><input type="number" id="e-qtd"></div><div class="field span2"><label>Tamanho</label><input type="text" id="e-tamanho"></div><div class="field"><label>Estado</label><select id="e-status"><option value="pendente">Pendente</option><option value="producao">Produção</option><option value="entregue">Entregue</option><option value="cancelado">Cancelado</option></select></div><div class="field"><label>Data Entrega</label><input type="text" id="e-data-entrega" placeholder="dd/mm/aaaa" maxlength="10"></div><div class="field"><label>Guia</label><input type="text" id="e-guia"></div><div class="field full"><label>Observações</label><textarea id="e-obs"></textarea></div></div></div><div class="modal-foot"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicao()">Guardar</button></div></div></div>
+
+<!-- Modal PIN (Backup) -->
+<div class="modal-bg" id="modal-pin"><div class="modal" style="max-width:380px"><div class="modal-head"><h3>🔒 Acesso Restrito</h3><button class="close-btn" onclick="fecharPin()">✕</button></div><div class="modal-body"><p style="font-size:13px;margin-bottom:12px">Introduza o PIN para aceder ao Backup.</p><input type="password" id="pin-input" placeholder="PIN" maxlength="10" inputmode="numeric" autocomplete="off" style="text-align:center;letter-spacing:4px;font-size:18px" onkeydown="if(event.key==='Enter')confirmarPin()"><div id="pin-erro" style="display:none;color:#c0392b;font-size:12px;margin-top:8px;text-align:center">PIN incorrecto. Tente novamente.</div></div><div class="modal-foot"><button class="btn btn-ghost" onclick="fecharPin()">Cancelar</button><button class="btn btn-primary" onclick="confirmarPin()">Entrar</button></div></div></div>
 
 <div class="toast" id="toast"></div>
 <div id="pdf-container-helper"></div>
@@ -903,7 +934,100 @@ function updateHeader() {
   document.getElementById('h-ent').textContent = d.filter(r => r.status === 'entregue').length;
 }
 
+
+/* ══ PIN do Backup ══ */
+const BACKUP_PIN = '654321';
+let _backupOk = false;
+function pedirPin() {
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-erro').style.display = 'none';
+  document.getElementById('modal-pin').classList.add('open');
+  setTimeout(() => document.getElementById('pin-input').focus(), 50);
+}
+function fecharPin() { document.getElementById('modal-pin').classList.remove('open'); }
+function confirmarPin() {
+  const inp = document.getElementById('pin-input');
+  if (inp.value.trim() === BACKUP_PIN) { _backupOk = true; fecharPin(); switchTab('backup'); }
+  else { document.getElementById('pin-erro').style.display = 'block'; inp.value = ''; inp.focus(); }
+}
+document.getElementById('modal-pin').addEventListener('click', e => { if (e.target.id === 'modal-pin') fecharPin(); });
+
+/* ══ Datas: formatação dd/mm/aaaa, validação e calendário (só no editor) ══ */
+const _MESES_EN = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+function _p2(n) { return String(n).padStart(2, '0'); }
+function fmtData(v) {
+  if (v === null || v === undefined || v === '') return '';
+  if (v instanceof Date) return isNaN(v) ? '' : _p2(v.getDate()) + '/' + _p2(v.getMonth() + 1) + '/' + v.getFullYear();
+  const s = String(v).trim(); let m;
+  if (!s) return '';
+  if ((m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/))) return _p2(m[1]) + '/' + _p2(m[2]) + '/' + m[3];
+  if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/))) return m[3] + '/' + m[2] + '/' + m[1];
+  if ((m = s.match(/^[A-Za-z]{3},? ([A-Za-z]{3}) (\d{1,2}) (\d{4})/)) && (m[1] in _MESES_EN))
+    return _p2(m[2]) + '/' + _p2(_MESES_EN[m[1]] + 1) + '/' + m[3];       // "Sat Jan 10 2026 00:00:00 GMT+0200 (...)"
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) { const d = new Date(s); if (!isNaN(d)) return fmtData(d); }
+  return s;
+}
+function dataValida(s) {
+  if (!s) return true;
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if (!m) return false;
+  const d = +m[1], mo = +m[2], y = +m[3];
+  if (y < 1900 || y > 2100 || mo < 1 || mo > 12 || d < 1) return false;
+  return d <= new Date(y, mo, 0).getDate();
+}
+function maskData(el) {
+  el.setAttribute('inputmode', 'numeric'); el.maxLength = 10; el.placeholder = 'dd/mm/aaaa';
+  el.addEventListener('input', () => {
+    const d = el.value.replace(/\D/g, '').slice(0, 8);
+    el.value = d.length > 4 ? d.slice(0,2) + '/' + d.slice(2,4) + '/' + d.slice(4)
+             : d.length > 2 ? d.slice(0,2) + '/' + d.slice(2) : d;
+    el.classList.remove('data-erro');
+  });
+}
+function validarCamposData(inputs) {
+  for (const inp of inputs) {
+    inp.value = fmtData(inp.value);
+    if (!dataValida(inp.value)) {
+      inp.classList.add('data-erro'); inp.focus();
+      toast('Data inválida. Use o formato dd/mm/aaaa.', 'err');
+      return false;
+    }
+  }
+  return true;
+}
+function soNumeros(el) {
+  el.setAttribute('inputmode', 'numeric'); el.placeholder = 'Só números';
+  el.addEventListener('input', () => { el.value = el.value.replace(/\D/g, ''); });
+}
+function guiaValida(v) { return v === '' || /^\d+$/.test(v); }
+function attachDatePicker(inp, inline) {
+  if (!inp || inp.dataset.dp) return; inp.dataset.dp = '1';
+  inp.type = 'text'; maskData(inp);
+  const wrap = document.createElement('div'); wrap.className = 'date-wrap' + (inline ? ' inl' : '');
+  inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+  const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'date-btn'; btn.title = 'Abrir calendário'; btn.textContent = '📅';
+  const nat = document.createElement('input'); nat.type = 'date'; nat.className = 'date-native'; nat.tabIndex = -1;
+  btn.addEventListener('mousedown', e => e.preventDefault());
+  btn.addEventListener('click', () => {
+    inp._picking = true;
+    const f = fmtData(inp.value), m = f.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    nat.value = (m && dataValida(f)) ? `${m[3]}-${m[2]}-${m[1]}` : '';
+    try { nat.showPicker(); } catch (e) { nat.focus(); nat.click(); }
+  });
+  const fim = () => { inp._picking = false; inp.focus(); };
+  nat.addEventListener('change', () => {
+    if (nat.value) { const [y, mo, d] = nat.value.split('-'); inp.value = `${d}/${mo}/${y}`; inp.classList.remove('data-erro'); }
+    fim();
+  });
+  nat.addEventListener('cancel', fim);
+  nat.addEventListener('blur', () => setTimeout(() => { if (inp._picking) fim(); }, 200));
+  wrap.appendChild(btn); wrap.appendChild(nat);
+  return wrap;
+}
+
 function switchTab(t) {
+  if (t === 'backup' && !_backupOk) { pedirPin(); return; }
+  if (t !== 'backup') _backupOk = false;
+  document.body.classList.toggle('tbl-wide', t === 'table');
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + t).classList.add('active');
@@ -925,6 +1049,8 @@ async function salvar() {
   const ot = document.getElementById('f-ot').value.trim();
   const cliente = document.getElementById('f-cliente').value.trim();
   if (!ot && !cliente) { toast('Preencha OT ou Cliente.', 'err'); return; }
+  if (!validarCamposData([document.getElementById('f-data-entrada'), document.getElementById('f-data-entrega')])) return;
+  if (!guiaValida(document.getElementById('f-guia').value.trim())) { toast('Nº Guia: apenas números.', 'err'); document.getElementById('f-guia').focus(); return; }
 
   const reg = {
     id: String(Date.now()),
@@ -987,24 +1113,36 @@ function renderTabela() {
   const empty = document.getElementById('empty');
   if (!activeFiltered.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
   empty.style.display = 'none';
-  tbody.innerHTML = activeFiltered.map((r, idx) => { const realIdx = all.indexOf(r); return `<tr><td><span class="ot-num">${r.ot || '—'}</span></td><td>${r.mes || '—'}</td><td>${r.dataEntrada || '—'}</td><td><strong>${r.cliente || '—'}</strong></td><td>${r.descricao || '—'}</td><td>${r.papel || '—'}</td><td>${r.qtd || '—'}</td><td>${r.tamanho || '—'}</td><td><select class="badge badge-${r.status}" onchange="updateField(${realIdx},'status',this.value,this)"><option value="pendente" ${r.status==='pendente'?'selected':''}>⏳ Pendente</option><option value="producao" ${r.status==='producao'?'selected':''}>⚙️ Produção</option><option value="entregue" ${r.status==='entregue'?'selected':''}>✅ Entregue</option><option value="cancelado" ${r.status==='cancelado'?'selected':''}>✗ Cancelado</option></select></td><td><span class="cell-edit" onclick="inlineEdit(this,${realIdx},'dataEntrega','text')">${r.dataEntrega || '—'}</span></td><td><span class="cell-edit" onclick="inlineEdit(this,${realIdx},'guia','text')">${r.guia || '—'}</span></td><td><span class="cell-edit" onclick="inlineEdit(this,${realIdx},'obs','text')">${r.obs || '—'}</span></td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="abrirModal(${realIdx})">✏️</button><button class="btn btn-danger btn-sm" onclick="deletar(${realIdx})">🗑️</button></div></td></tr>`; }).join('');
+  tbody.innerHTML = activeFiltered.map((r, idx) => { const realIdx = all.indexOf(r); return `<tr><td><span class="ot-num">${r.ot || '—'}</span></td><td>${r.mes || '—'}</td><td>${fmtData(r.dataEntrada) || '—'}</td><td><strong>${r.cliente || '—'}</strong></td><td>${r.descricao || '—'}</td><td>${r.papel || '—'}</td><td>${r.qtd || '—'}</td><td>${r.tamanho || '—'}</td><td><select class="badge badge-${r.status}" onchange="updateField(${realIdx},'status',this.value,this)"><option value="pendente" ${r.status==='pendente'?'selected':''}>⏳ Pendente</option><option value="producao" ${r.status==='producao'?'selected':''}>⚙️ Produção</option><option value="entregue" ${r.status==='entregue'?'selected':''}>✅ Entregue</option><option value="cancelado" ${r.status==='cancelado'?'selected':''}>✗ Cancelado</option></select></td><td><span class="cell-edit" onclick="inlineEdit(this,${realIdx},'dataEntrega','text')">${fmtData(r.dataEntrega) || '—'}</span></td><td><span class="cell-edit" onclick="inlineEdit(this,${realIdx},'guia','text')">${r.guia || '—'}</span></td><td><span class="cell-edit" onclick="inlineEdit(this,${realIdx},'obs','text')">${r.obs || '—'}</span></td><td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="abrirModal(${realIdx})">✏️</button><button class="btn btn-danger btn-sm" onclick="deletar(${realIdx})">🗑️</button></div></td></tr>`; }).join('');
 }
 
 function inlineEdit(span, idx, field, type) {
   const data = getData();
-  const current = data[idx][field] || '';
+  const isDate = (field === 'dataEntrega' || field === 'dataEntrada');
+  const current = isDate ? fmtData(data[idx][field]) : (data[idx][field] || '');
   const inp = document.createElement('input');
-  inp.type = (field === 'dataEntrega' || field === 'dataEntrada') ? 'text' : type;
-  inp.placeholder = (field === 'dataEntrega' || field === 'dataEntrada') ? 'dd/mm/aaaa' : '';
-  inp.maxLength = (field === 'dataEntrega' || field === 'dataEntrada') ? 10 : 524288;
+  inp.type = isDate ? 'text' : type;
   inp.value = current;
   inp.className = 'cell-input';
   span.replaceWith(inp);
+  if (isDate) attachDatePicker(inp, true);
+  if (field === 'guia') soNumeros(inp);
   inp.focus();
   inp.addEventListener('blur', () => {
-    updateField(idx, field, inp.value, null);
+    if (inp._picking || inp._cancel) return;
+    if (isDate) {
+      const v = fmtData(inp.value);
+      if (!dataValida(v)) { toast('Data inválida. Use o formato dd/mm/aaaa.', 'err'); inp.classList.add('data-erro'); setTimeout(() => inp.focus(), 0); return; }
+      updateField(idx, field, v, null);
+    } else {
+      if (field === 'guia' && !guiaValida(inp.value.trim())) { toast('Nº Guia: apenas números.', 'err'); inp.value = inp.value.replace(/\D/g, ''); setTimeout(() => inp.focus(), 0); return; }
+      updateField(idx, field, inp.value.trim(), null);
+    }
   });
-  inp.addEventListener('keydown', e => { if(e.key === 'Enter') inp.blur(); if(e.key === 'Escape') renderTabela(); });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') inp.blur();
+    if (e.key === 'Escape') { inp._cancel = true; renderTabela(); }
+  });
 }
 
 function updateField(idx, field, value, el) {
@@ -1054,7 +1192,7 @@ function abrirModal(idx) {
   editIdx=idx; 
   const r=getData()[idx]; 
   document.getElementById('e-ot').value=r.ot||''; 
-  document.getElementById('e-data-entrada').value=r.dataEntrada||''; 
+  document.getElementById('e-data-entrada').value=fmtData(r.dataEntrada); 
   document.getElementById('e-mes').value=r.mes||''; 
   document.getElementById('e-cliente').value=r.cliente||''; 
   document.getElementById('e-descricao').value=r.descricao||''; 
@@ -1062,13 +1200,15 @@ function abrirModal(idx) {
   document.getElementById('e-qtd').value=r.qtd||''; 
   document.getElementById('e-tamanho').value=r.tamanho||''; 
   document.getElementById('e-status').value=r.status||'pendente'; 
-  document.getElementById('e-data-entrega').value=r.dataEntrega||''; 
+  document.getElementById('e-data-entrega').value=fmtData(r.dataEntrega); 
   document.getElementById('e-guia').value=r.guia||''; 
   document.getElementById('e-obs').value=r.obs||''; 
   document.getElementById('modal-bg').classList.add('open'); 
 }
 function fecharModal() { document.getElementById('modal-bg').classList.remove('open'); editIdx=null; }
 function salvarEdicao() { 
+  if (!validarCamposData([document.getElementById('e-data-entrada'), document.getElementById('e-data-entrega')])) return;
+  if (!guiaValida(document.getElementById('e-guia').value.trim())) { toast('Nº Guia: apenas números.', 'err'); document.getElementById('e-guia').focus(); return; }
   const data = getData(); 
   const updated = {...data[editIdx], 
     ot: document.getElementById('e-ot').value, 
@@ -1097,18 +1237,33 @@ function salvarEdicao() {
 }
 document.getElementById('modal-bg').addEventListener('click', e => { if(e.target === document.getElementById('modal-bg')) fecharModal(); });
 
-function exportCSV() { const data=getData(); if(!data.length){ toast('Sem dados.','err'); return; } const hd=['OT','Mês','Entrada','Cliente','Descrição','Papel','Qtd','Tamanho','Estado','Data Entrega','Guia','Observações']; const rows=data.map(r=>[r.ot,r.mes,r.dataEntrada,r.cliente,r.descricao,r.papel,r.qtd,r.tamanho,r.status,r.dataEntrega,r.guia,r.obs].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(',')); const csv=[hd.join(','),...rows].join('\n'); const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent('\uFEFF'+csv); a.download=`backup_${new Date().toISOString().slice(0,10)}.csv`; a.click(); toast('CSV exportado!','ok'); }
+function exportXLSM() {
+  const data = getData();
+  if (!data.length) { toast('Sem dados.', 'err'); return; }
+  if (typeof XLSX === 'undefined') { toast('Biblioteca XLSX não carregada. Verifique a ligação à internet.', 'err'); return; }
+  const est = { pendente:'Pendente', producao:'Produção', entregue:'Entregue', cancelado:'Cancelado' };
+  const num = v => (v !== undefined && v !== null && String(v).trim() !== '' && !isNaN(v)) ? Number(v) : (v || '');
+  const hd = ['OT','Mês','Entrada','Cliente','Descrição','Papel','Qtd','Tamanho','Estado','Data Entrega','Guia','Observações'];
+  const rows = data.map(r => [num(r.ot), r.mes||'', fmtData(r.dataEntrada), r.cliente||'', r.descricao||'', r.papel||'', num(r.qtd), r.tamanho||'', est[r.status]||r.status||'', fmtData(r.dataEntrega), String(r.guia||''), r.obs||'']);
+  const ws = XLSX.utils.aoa_to_sheet([hd, ...rows]);
+  ws['!cols'] = [8,13,12,26,40,16,8,18,12,13,12,36].map(w => ({ wch: w }));
+  ws['!autofilter'] = { ref: ws['!ref'] };
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Plano de Trabalhos');
+  XLSX.writeFile(wb, `plano_trabalhos_${new Date().toISOString().slice(0,10)}.xlsm`, { bookType: 'xlsm' });
+  toast('XLSM exportado!', 'ok');
+}
 
 // BACKUP FUNCTIONS
-function fazerBackup() { const data=getData(); const backup={ data, dataExportacao: new Date().toISOString(), totalRegistos: data.length }; const json=JSON.stringify(backup,null,2); const blob=new Blob([json],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(a.href); atualizarPreviewBackup(); toast('Backup criado!','ok'); }
-function restaurarBackup() { document.getElementById('backup-file').click(); }
-function carregarBackup(input) { const file=input.files[0]; if(!file) return; const reader=new FileReader(); reader.onload=e=>{ try{ const backup=JSON.parse(e.target.result); const dados=backup.data || backup; if(Array.isArray(dados)){ setData(dados); toast('Backup restaurado com sucesso!','ok'); renderTabela(); atualizarPreviewBackup(); }else{ toast('Formato inválido.','err'); } }catch(err){ toast('Erro ao restaurar backup.','err'); } }; reader.readAsText(file); input.value=''; }
+function fazerBackup() { if(!_backupOk){ pedirPin(); return; } const data=getData(); const backup={ data, dataExportacao: new Date().toISOString(), totalRegistos: data.length }; const json=JSON.stringify(backup,null,2); const blob=new Blob([json],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(a.href); atualizarPreviewBackup(); toast('Backup criado!','ok'); }
+function restaurarBackup() { if(!_backupOk){ pedirPin(); return; } document.getElementById('backup-file').click(); }
+function carregarBackup(input) { if(!_backupOk){ pedirPin(); input.value=''; return; } const file=input.files[0]; if(!file) return; const reader=new FileReader(); reader.onload=e=>{ try{ const backup=JSON.parse(e.target.result); const dados=backup.data || backup; if(Array.isArray(dados)){ setData(dados); toast('Backup restaurado com sucesso!','ok'); renderTabela(); atualizarPreviewBackup(); }else{ toast('Formato inválido.','err'); } }catch(err){ toast('Erro ao restaurar backup.','err'); } }; reader.readAsText(file); input.value=''; }
 function atualizarPreviewBackup() { const data=getData(); const preview=document.getElementById('backup-preview'); if(data.length){ preview.innerHTML=`<strong>📊 Estado actual dos dados:</strong><br>📋 Total de registos: ${data.length}<br>🕐 Última actualização: ${new Date().toLocaleString()}<br><br><strong>Pré-visualização:</strong><br><code>${JSON.stringify({ total:data.length, exemplo:data[0] },null,2).substring(0,500)}${data.length>1 ? '...' : ''}</code>`; }else{ preview.innerHTML='<strong>📊 Estado actual:</strong><br>Nenhum dado disponível. Crie alguns registos primeiro.'; } }
 
 // RELATÓRIOS FUNCTIONS
-function gerarRelatorio() { const data=getData(); const mes=document.getElementById('rel-mes').value; const status=document.getElementById('rel-status').value; const ano=document.getElementById('rel-ano').value; let filtrados=data.filter(r=>{ let ok=true; if(mes && r.mes!==mes) ok=false; if(status && r.status!==status) ok=false; if(ano && r.dataEntrada && !r.dataEntrada.startsWith(ano)) ok=false; return ok; }); const total=filtrados.length; const pendentes=filtrados.filter(r=>r.status==='pendente').length; const producao=filtrados.filter(r=>r.status==='producao').length; const entregues=filtrados.filter(r=>r.status==='entregue').length; const cancelados=filtrados.filter(r=>r.status==='cancelado').length; document.getElementById('relatorio-resumo').innerHTML=`<div class="resumo-item"><span class="numero">${total}</span><span class="label">Total Registos</span></div><div class="resumo-item"><span class="numero">${pendentes}</span><span class="label">Pendentes</span></div><div class="resumo-item"><span class="numero">${producao}</span><span class="label">Em Produção</span></div><div class="resumo-item"><span class="numero">${entregues}</span><span class="label">Entregues</span></div><div class="resumo-item"><span class="numero">${cancelados}</span><span class="label">Cancelados</span></div>`; const tbodyRel=document.getElementById('relatorio-tbody'); if(!filtrados.length){ tbodyRel.innerHTML='<tr><td colspan="6">Nenhum registo encontrado com os filtros seleccionados.</td></tr>'; return filtrados; } tbodyRel.innerHTML=filtrados.map(r=>`<tr><td><span class="ot-num">${r.ot||'—'}</span></td><td><strong>${r.cliente||'—'}</strong></td><td>${r.descricao||'—'}</td><td><span class="badge badge-${r.status}">${r.status==='pendente'?'Pendente':r.status==='producao'?'Produção':r.status==='entregue'?'Entregue':'Cancelado'}</span></td><td>${r.dataEntrega||'—'}</td><td>${r.guia||'—'}</td></tr>`).join(''); return filtrados; }
+function gerarRelatorio() { const data=getData(); const mes=document.getElementById('rel-mes').value; const status=document.getElementById('rel-status').value; const ano=document.getElementById('rel-ano').value; let filtrados=data.filter(r=>{ let ok=true; if(mes && r.mes!==mes) ok=false; if(status && r.status!==status) ok=false; if(ano && r.dataEntrada && !fmtData(r.dataEntrada).endsWith(ano)) ok=false; return ok; }); const total=filtrados.length; const pendentes=filtrados.filter(r=>r.status==='pendente').length; const producao=filtrados.filter(r=>r.status==='producao').length; const entregues=filtrados.filter(r=>r.status==='entregue').length; const cancelados=filtrados.filter(r=>r.status==='cancelado').length; document.getElementById('relatorio-resumo').innerHTML=`<div class="resumo-item"><span class="numero">${total}</span><span class="label">Total Registos</span></div><div class="resumo-item"><span class="numero">${pendentes}</span><span class="label">Pendentes</span></div><div class="resumo-item"><span class="numero">${producao}</span><span class="label">Em Produção</span></div><div class="resumo-item"><span class="numero">${entregues}</span><span class="label">Entregues</span></div><div class="resumo-item"><span class="numero">${cancelados}</span><span class="label">Cancelados</span></div>`; const tbodyRel=document.getElementById('relatorio-tbody'); if(!filtrados.length){ tbodyRel.innerHTML='<tr><td colspan="6">Nenhum registo encontrado com os filtros seleccionados.</td></tr>'; return filtrados; } tbodyRel.innerHTML=filtrados.map(r=>`<tr><td><span class="ot-num">${r.ot||'—'}</span></td><td><strong>${r.cliente||'—'}</strong></td><td>${r.descricao||'—'}</td><td><span class="badge badge-${r.status}">${r.status==='pendente'?'Pendente':r.status==='producao'?'Produção':r.status==='entregue'?'Entregue':'Cancelado'}</span></td><td>${fmtData(r.dataEntrega)||'—'}</td><td>${r.guia||'—'}</td></tr>`).join(''); return filtrados; }
 
-async function exportarRelatorioPDF() { const data=getData(); const mes=document.getElementById('rel-mes').value; const status=document.getElementById('rel-status').value; const ano=document.getElementById('rel-ano').value; let filtrados=data.filter(r=>{ let ok=true; if(mes && r.mes!==mes) ok=false; if(status && r.status!==status) ok=false; if(ano && r.dataEntrada && !r.dataEntrada.startsWith(ano)) ok=false; return ok; }); if(!filtrados.length){ toast('Sem dados para o relatório.','err'); return; } toast('Gerando PDF...','ok'); try{ const container=document.getElementById('pdf-container-helper'); container.innerHTML=''; container.style.cssText='position:fixed;left:-9999px;top:0;width:1100px;background:white;padding:30px;font-family:\'IBM Plex Sans\',Arial,sans-serif;'; const dataAtual=new Date().toLocaleDateString('pt-PT'); const headerDiv=document.createElement('div'); headerDiv.style.cssText='margin-bottom:25px;border-bottom:3px solid #3d2fa0;padding-bottom:15px;'; headerDiv.innerHTML=`<h1 style="font-size:24px;margin:0 0 8px 0;">Relatório de Trabalhos</h1><div style="display:flex;justify-content:space-between;color:#6b6877;"><span><strong>Gerado:</strong> ${dataAtual}</span><span><strong>Total:</strong> ${filtrados.length}</span>${mes?`<span><strong>Mês:</strong> ${mes}</span>`:''}${status?`<span><strong>Status:</strong> ${status}</span>`:''}</div>`; container.appendChild(headerDiv); const table=document.createElement('table'); table.style.cssText='width:100%;border-collapse:collapse;font-size:10px;'; const thead=document.createElement('thead'); const headerRow=document.createElement('tr'); ['OT','Mês','Entrada','Cliente','Descrição','Papel','Qtd','Tamanho','Estado','Data Entrega','Guia','Observações'].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; th.style.cssText='background:#18171a;color:white;padding:8px;border:1px solid #333;text-align:left;'; headerRow.appendChild(th); }); thead.appendChild(headerRow); table.appendChild(thead); const tbody=document.createElement('tbody'); filtrados.forEach(r=>{ const row=document.createElement('tr'); [r.ot||'—', r.mes||'—', r.dataEntrada||'—', r.cliente||'—', (r.descricao||'—').substring(0,50), r.papel||'—', r.qtd||'—', (r.tamanho||'—').substring(0,40), {pendente:'Pendente',producao:'Produção',entregue:'Entregue',cancelado:'Cancelado'}[r.status]||r.status, r.dataEntrega||'—', r.guia||'—', (r.obs||'—').substring(0,50)].forEach(dado=>{ const td=document.createElement('td'); td.textContent=dado; td.style.cssText='padding:6px;border:1px solid #ddd;'; row.appendChild(td); }); tbody.appendChild(row); }); table.appendChild(tbody); container.appendChild(table); const footer=document.createElement('div'); footer.style.cssText='margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:9px;color:#999;text-align:center;'; footer.innerHTML=`Documento gerado automaticamente · Plano de Trabalhos · ${new Date().toLocaleString('pt-PT')}`; container.appendChild(footer); await new Promise(r=>setTimeout(r,100)); const canvas=await html2canvas(container,{scale:2,backgroundColor:'#ffffff'}); const imgData=canvas.toDataURL('image/png'); const {jsPDF}=window.jspdf; const pdf=new jsPDF('p','mm','a4'); const imgWidth=210; const pageHeight=297; const imgHeight=(canvas.height*imgWidth)/canvas.width; let position=0; pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight); let heightLeft=imgHeight-pageHeight; while(heightLeft>0){ position=heightLeft-imgHeight; pdf.addPage(); pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight); heightLeft-=pageHeight; } pdf.save(`relatorio_${new Date().toISOString().slice(0,10)}.pdf`); toast('PDF gerado com sucesso!','ok'); container.innerHTML=''; }catch(err){ toast('Erro ao gerar PDF: '+err.message,'err'); } }
+async function exportarRelatorioPDF() { const data=getData(); const mes=document.getElementById('rel-mes').value; const status=document.getElementById('rel-status').value; const ano=document.getElementById('rel-ano').value; let filtrados=data.filter(r=>{ let ok=true; if(mes && r.mes!==mes) ok=false; if(status && r.status!==status) ok=false; if(ano && r.dataEntrada && !fmtData(r.dataEntrada).endsWith(ano)) ok=false; return ok; }); if(!filtrados.length){ toast('Sem dados para o relatório.','err'); return; } toast('Gerando PDF...','ok'); try{ const container=document.getElementById('pdf-container-helper'); container.innerHTML=''; container.style.cssText='position:fixed;left:-9999px;top:0;width:1100px;background:white;padding:30px;font-family:\'IBM Plex Sans\',Arial,sans-serif;'; const dataAtual=new Date().toLocaleDateString('pt-PT'); const headerDiv=document.createElement('div'); headerDiv.style.cssText='margin-bottom:25px;border-bottom:3px solid #3d2fa0;padding-bottom:15px;'; headerDiv.innerHTML=`<h1 style="font-size:24px;margin:0 0 8px 0;">Relatório de Trabalhos</h1><div style="display:flex;justify-content:space-between;color:#6b6877;"><span><strong>Gerado:</strong> ${dataAtual}</span><span><strong>Total:</strong> ${filtrados.length}</span>${mes?`<span><strong>Mês:</strong> ${mes}</span>`:''}${status?`<span><strong>Status:</strong> ${status}</span>`:''}</div>`; container.appendChild(headerDiv); const table=document.createElement('table'); table.style.cssText='width:100%;border-collapse:collapse;font-size:10px;'; const thead=document.createElement('thead'); const headerRow=document.createElement('tr'); ['OT','Mês','Entrada','Cliente','Descrição','Papel','Qtd','Tamanho','Estado','Data Entrega','Guia','Observações'].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; th.style.cssText='background:#18171a;color:white;padding:8px;border:1px solid #333;text-align:left;'; headerRow.appendChild(th); }); thead.appendChild(headerRow); table.appendChild(thead); const tbody=document.createElement('tbody'); filtrados.forEach(r=>{ const row=document.createElement('tr'); [r.ot||'—', r.mes||'—', r.dataEntrada||'—', r.cliente||'—', (r.descricao||'—').substring(0,50), r.papel||'—', r.qtd||'—', (r.tamanho||'—').substring(0,40), {pendente:'Pendente',producao:'Produção',entregue:'Entregue',cancelado:'Cancelado'}[r.status]||r.status, fmtData(r.dataEntrega)||'—', r.guia||'—', (r.obs||'—').substring(0,50)].forEach(dado=>{ const td=document.createElement('td'); td.textContent=dado; td.style.cssText='padding:6px;border:1px solid #ddd;'; row.appendChild(td); }); tbody.appendChild(row); }); table.appendChild(tbody); container.appendChild(table); const footer=document.createElement('div'); footer.style.cssText='margin-top:20px;padding-top:10px;border-top:1px solid #ddd;font-size:9px;color:#999;text-align:center;'; footer.innerHTML=`Documento gerado automaticamente · Plano de Trabalhos · ${new Date().toLocaleString('pt-PT')}`; container.appendChild(footer); await new Promise(r=>setTimeout(r,100)); const canvas=await html2canvas(container,{scale:2,backgroundColor:'#ffffff'}); const imgData=canvas.toDataURL('image/png'); const {jsPDF}=window.jspdf; const pdf=new jsPDF('p','mm','a4'); const imgWidth=210; const pageHeight=297; const imgHeight=(canvas.height*imgWidth)/canvas.width; let position=0; pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight); let heightLeft=imgHeight-pageHeight; while(heightLeft>0){ position=heightLeft-imgHeight; pdf.addPage(); pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight); heightLeft-=pageHeight; } pdf.save(`relatorio_${new Date().toISOString().slice(0,10)}.pdf`); toast('PDF gerado com sucesso!','ok'); container.innerHTML=''; }catch(err){ toast('Erro ao gerar PDF: '+err.message,'err'); } }
 
 function toast(msg,type){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast '+type+' show'; clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2800); }
 
@@ -1116,6 +1271,9 @@ updateHeader();
 renderTabela();
 // Ligar ao Sheets ao arrancar
 if (SCRIPT_URL) carregarDoSheets();
+
+['f-data-entrada','f-data-entrega','e-data-entrada','e-data-entrega'].forEach(id => attachDatePicker(document.getElementById(id)));
+['f-guia','e-guia'].forEach(id => soNumeros(document.getElementById(id)));
 </script>
 </body>
 </html>
